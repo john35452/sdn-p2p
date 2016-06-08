@@ -13,6 +13,32 @@ def transmit_data(client,socket):
         status = client.get_torrents_status()
         threadlock.release()
         #print status
+        d_payload = 0.0
+        u_payload = 0.0
+        for k,v in status.iteritems():
+            d_payload += v['total_payload_download']
+            u_payload += v['total_payload_upload']
+        if u_payload > d_payload*client_data['rate']:
+            print 'Upload too much',u_payload
+            if not client_data['stop']:
+                threadlock.acquire()
+                for k,v in status.iteritems():
+                    client.set_torrent_max_upload_speed(k,2)
+                threadlock.release()
+                print 'Stop uploading'
+                client_data['stop'] = True
+        else:
+            if client_data['stop']:
+                speed = ((d_payload*client_data['rate'])-u_payload)/3000.0
+                threadlock.acquire()
+                for k,v in status.iteritems():
+                    if torrent_speed[k]<speed:
+                        client.set_torrent_max_upload_speed(k,torrent_speed[k])
+                    else:
+                        client.set_torrent_max_upload_speed(k,speed)
+                threadlock.release()
+                print 'Keep uploading'
+                client_data['stop'] = False
         hashid = []
         content = []
         for k,v in status.iteritems():
@@ -50,6 +76,8 @@ a.login()
 state = a.get_session_state()
 print state
 torrent_file = {}
+client_data = {'limit':False,'rate':1.0,'stop':False}
+torrent_speed = {}
 #Transmit to server
 data_sending = True
 if data_sending:
@@ -134,7 +162,7 @@ else:
                 for k,v in data.iteritems():
                     if v['name']+'.torrent' not in torrent_file:
                         torrent_file[v['name']+'.torrent'] = k
-                print torrent_file
+                #print torrent_file
             elif line[0] == '4':
                 threadlock.acquire()
                 #torrent = a.get_session_state()
@@ -177,18 +205,27 @@ else:
                 threadlock.release()
             elif line[0] == 'us':
                 print 'limit upload torrent %s to %s KB per second'%(line[1],line[2])
+                speed = float(line[2]) if not client_data['stop'] else 2
                 threadlock.acquire()
-                a.set_torrent_max_upload_speed(torrent_file[line[1]],float(line[2]))
+                a.set_torrent_max_upload_speed(torrent_file[line[1]],speed)
                 threadlock.release()
+                torrent_speed[line[1]]=int(line[2])
             elif line[0] == '10':
-                print 'Task finishes'
                 threadlock.acquire()
+                data = a.get_torrents_status()
                 a.shutdown()
                 threadlock.release()
+                upload = 0.0
+                download = 0.0
+                for k,v in data.iteritems():
+                    upload += v['total_payload_upload']
+                    download += v['total_payload_download']
+                print 'Wish rate:',client_data['rate'],'Real rate:',upload/download  
+                print 'Task finishes'
                 break
             elif line[0] == 'sf':
                 print 'get session status'
-                key = ['has_incoming_connections','download_rate','upload_rate','total_download','tracker_upload_rate','total_tracker_download','total_redundant_bytes','num_peers','num_unchoked','down_bandwidth_queue','unchoke_counter','utp_stats']
+                key = ['download_rate','upload_rate','total_download','payload_download_rate','payload_upload_rate','total_redundant_bytes','num_peers','utp_stats']
                 threadlock.acquire()
                 data = a.get_session_status(key)
                 threadlock.release()
@@ -199,8 +236,14 @@ else:
                 threadlock.acquire()
                 data = a.get_torrent_status(torrent_file[line[1]])
                 threadlock.release()
-                print 'torrent at %s finish:%s\nIntegrity:%s/%s %s Average speed:%lf\nDownload:%s Upload:%s'%(line[1],data['is_finished'],data['total_payload_download'],data['total_wanted'],data['progress'],data['total_payload_download']/(30*1024),data['total_payload_download'],data['total_payload_upload'])
+                #for k in sorted(data.iteritems()):
+                #    print k
+                download_time = data['finished_time'] if data['is_finished'] else data['active_time']
+                print 'torrent at %s finish:%s\nIntegrity:%s/%s %s Average speed:%lf %lf\nDownload:%s Upload:%s\n'%(line[1],data['is_finished'],data['total_payload_download'],data['total_wanted'],data['progress'],data['total_payload_download']/(download_time),data['total_payload_upload']/(data['active_time']-data['seeding_time']),data['total_payload_download'],data['total_payload_upload'])
             elif line[0] == 's':
                 print 'sleep for',line[1],'seconds'
                 time.sleep(int(line[1]))
+            elif line[0] == 'rate':
+                print 'The ratio between download and upload is:',line[1]
+                client_data['rate'] = float(line[1])
     print 'It takes %lf seconds totally'%(time.time()-t1)

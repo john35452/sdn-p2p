@@ -16,6 +16,7 @@ from mininet.node import Controller, OVSSwitch, RemoteController,CPULimitedHost
 from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.util import custom,pmonitor
+from mininet.link import Intf
 import commands
 import threading
 import time
@@ -25,6 +26,7 @@ import json
 def multiControllerNet():
     "Create a network from semi-scratch with multiple controllers."
 
+    NODE1_IP='192.168.144.126'
     NODE2_IP='192.168.144.134'
     CONTROLLER_IP='192.168.144.126'
     #net = Mininet( controller=Controller,host=CPULimitedHost)
@@ -96,8 +98,12 @@ def multiControllerNet():
     #    k.start([c2])
     for k in sdn_switch:
         k.start([c1])
-
+    
     sdn_switch[0].cmdPrint('ovs-vsctl add-port '+sdn_switch[0].name+' '+sdn_switch[0].name+'-gre1 -- set interface '+sdn_switch[0].name+'-gre1 type=gre options:remote_ip='+NODE2_IP)
+    for k in hosts1:
+        k.cmdPrint('ip link set mtu 1454 dev '+k.name+'-eth0')
+    nat = net.get('nat0')
+    nat.cmdPrint('ip link set mtu 1454 dev nat0-eth0')
     print "*** Testing network"
     #net.pingAll()
     '''
