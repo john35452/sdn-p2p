@@ -71,7 +71,13 @@ a = p2p_client(sys.argv[2],sys.argv[3])
 if sys.argv[1]=='1':
     a.config()
     a.start_daemon()
-a.get_user_info()
+while True:
+    try:
+        a.get_user_info()
+        break
+    except:
+        print 'get info again'
+        time.sleep(0.1)
 a.login()
 state = a.get_session_state()
 print state
@@ -87,6 +93,7 @@ if data_sending:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((ip, port))
+            print 'Connection establish'
             break
         except:
             print 'Connection fail'
@@ -206,10 +213,11 @@ else:
             elif line[0] == 'us':
                 print 'limit upload torrent %s to %s KB per second'%(line[1],line[2])
                 speed = float(line[2]) if not client_data['stop'] else 2
+                print 'Real upload speed:',speed
                 threadlock.acquire()
                 a.set_torrent_max_upload_speed(torrent_file[line[1]],speed)
                 threadlock.release()
-                torrent_speed[line[1]]=int(line[2])
+                torrent_speed[torrent_file[line[1]]]=float(line[2])
             elif line[0] == '10':
                 threadlock.acquire()
                 data = a.get_torrents_status()

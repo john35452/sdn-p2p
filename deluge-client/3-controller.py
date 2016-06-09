@@ -48,7 +48,7 @@ def multiControllerNet():
     c3 = net.addController( 'c3', port=6635 )
     #c3 = net.addController('c3', controller=RemoteController,ip='127.0.0.1',port=6635)
 
-    layer = 3
+    layer = 4
     tmp = 1<<layer
     print "*** Creating switches"
     sdn_switch = [net.addSwitch('S%d'%(n)) for n in range(15,16)]
@@ -115,7 +115,9 @@ def multiControllerNet():
         #popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
         #popens[hosts2[i]] = hosts2[i].popen('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
         hosts1[i].cmd('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
+        #time.sleep(1)
         hosts2[i].cmd('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
+        #time.sleep(1)
     '''
     for host,line in pmonitor(popens):
         if host:

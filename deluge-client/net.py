@@ -106,20 +106,26 @@ def multiControllerNet():
     nat.cmdPrint('ip link set mtu 1454 dev nat0-eth0')
     print "*** Testing network"
     #net.pingAll()
-    '''
+    out = {}
     popens = {}
+    count = {}
     for i in range(tmp<<1):
         print 'activate',i
         #popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
+        popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1'%(i))
         #popens[hosts2[i]] = hosts2[i].popen('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
-        hosts1[i].cmd('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
-        hosts2[i].cmd('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
-    '''
-    '''
+        #hosts1[i].cmdPrint('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
+        #hosts2[i].cmd('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
+        out[hosts1[i].name] = open('user1'+str(i),'w')
+        count[hosts1[i].name] = 0
+    
     for host,line in pmonitor(popens):
         if host:
-            print "<%s>: %s" % ( host.name, line.strip() )
-    '''
+            out[host.name].write(line.strip()+'\n')
+            count[host.name] += 1
+            print count
+            #print "<%s>: %s" % ( host.name, line.strip() )
+    
     '''
     print 'host1'
     hosts1[0].cmd('python client.py 1 1 1 user1 > a &')
@@ -128,7 +134,7 @@ def multiControllerNet():
     print "*** Running CLI"
     '''
     CLI( net )
-
+    print count
     print "*** Stopping network"
     net.stop()
 
