@@ -6,7 +6,6 @@ import sys
 import re
 from datetime import datetime
 import traceback
-from pympler import asizeof
 
 ip = '192.168.144.124'
 port = 50000
@@ -33,7 +32,7 @@ while True:
 while True:
     data = {'source':'switch','timestamp':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     for k in switch_list:
-        q = commands.getoutput('sudo ovs-ofctl dump-flows '+k)
+        q = commands.getoutput('sudo ovs-ofctl -O OpenFlow13 dump-flows '+k)
         q = q.replace(',',' ')
         q = q.split('\n')[1:]
         data[k] = []

@@ -12,6 +12,7 @@ time_start = [0]
 cut = time_range/len(file_list)
 for k in range(len(file_list)-1):
     time_start.append(random.randint(k*cut,(k+1)*cut))
+time_start.append(time_range)
 random.shuffle(files)
 download = speed[random.randint(0,2)]
 upload = speed[random.randint(0,2)]
@@ -25,10 +26,9 @@ with open(sys.argv[1],'w') as f:
         f.write('3 '+files[k]+'\n')
         f.write('ds '+files[k]+' '+str(download)+'\n')
         f.write('us '+files[k]+' '+str(upload)+'\n')
-        f.write('7 '+files[k]+'\n')
-        f.write('s '+str(time_start[k])+'\n')
         f.write('1\n')
-    f.write('s 30')
+        f.write('7 '+files[k]+'\n')
+        f.write('s '+str(time_start[k+1]-time_start[k])+'\n')
     for k in file_list:
         f.write('f '+k+'\n')
     f.write('sf\n10\n')

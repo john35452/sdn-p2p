@@ -66,7 +66,7 @@ def multiControllerNet():
     #nat.configDefault()
     #net.build()
     #net.staticArp()
-    c1.start()
+    #c1.start()
     #c2.start()
     #c3.start()
     for k in left_switch:

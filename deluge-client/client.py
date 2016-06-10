@@ -50,6 +50,8 @@ def transmit_data(client,socket):
         status['content'] = content
         status['source'] = 'client'
         status['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        status['inter_ip'] = sock_name[0]
+        status['inter_port'] = sock_name[1]
         try:
             data = json.dumps(status)
             #socket.sendall(str(len(data))+'\n'+data+'\n')
@@ -97,7 +99,9 @@ if data_sending:
             break
         except:
             print 'Connection fail'
-
+    
+    sock_name = sock.getsockname()
+    print sock_name
     threadlock = threading.Lock()
     trans = threading.Thread(target=transmit_data,args=(a,sock),name='thread-transdata')
     trans.setDaemon(True)
@@ -247,7 +251,7 @@ else:
                 #for k in sorted(data.iteritems()):
                 #    print k
                 download_time = data['finished_time'] if data['is_finished'] else data['active_time']
-                print 'torrent at %s finish:%s\nIntegrity:%s/%s %s Average speed:%lf %lf\nDownload:%s Upload:%s\n'%(line[1],data['is_finished'],data['total_payload_download'],data['total_wanted'],data['progress'],data['total_payload_download']/(download_time),data['total_payload_upload']/(data['active_time']-data['seeding_time']),data['total_payload_download'],data['total_payload_upload'])
+                print 'torrent at %s finish:%s\nIntegrity:%s/%s %s Average speed:%s %s\nDownload:%s Upload:%s\n'%(line[1],data['is_finished'],data['total_payload_download'],data['total_wanted'],data['progress'],data['total_payload_download']/(download_time),data['total_payload_upload']/(data['active_time']-data['seeding_time']),data['total_payload_download'],data['total_payload_upload'])
             elif line[0] == 's':
                 print 'sleep for',line[1],'seconds'
                 time.sleep(int(line[1]))
