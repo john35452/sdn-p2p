@@ -1,0 +1,26 @@
+2
+rate 0.795627294052
+3 100MBb.txt.torrent
+ds 100MBb.txt.torrent 1000
+us 100MBb.txt.torrent 1000
+1
+7 100MBb.txt.torrent
+s 258
+3 100MBc.txt.torrent
+ds 100MBc.txt.torrent 1000
+us 100MBc.txt.torrent 1000
+1
+7 100MBc.txt.torrent
+s 239
+3 100MBa.txt.torrent
+ds 100MBa.txt.torrent 1000
+us 100MBa.txt.torrent 1000
+1
+7 100MBa.txt.torrent
+s 503
+s 1000
+f 100MBa.txt.torrent
+f 100MBb.txt.torrent
+f 100MBc.txt.torrent
+sf
+10

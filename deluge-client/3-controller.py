@@ -50,7 +50,7 @@ def multiControllerNet():
     #c3 = net.addController( 'c3', port=6635 )
     c3 = net.addController('c3', controller=RemoteController,ip=CONTROLLER_IP,port=6635)
 
-    layer = 4
+    layer = 5
     tmp = 1<<layer
     print "*** Creating switches"
     sdn_switch = [net.addSwitch('S%d'%(n)) for n in range(15,16)]
@@ -113,8 +113,34 @@ def multiControllerNet():
     
     for k in sdn_switch: 
         for i in range(tmp<<1):
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,in_port=4,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,in_port=4,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,in_port=4,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,in_port=4,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,in_port=4,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            #k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,in_port=4,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:2'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=192.168.144.124,ip_dst=10.0.0.%s,action=output:3'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=192.168.144.124,action=output:4'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=192.168.144.124,action=output:4'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=10.0.0.%s,ip_src=192.168.144.124,action=output:4'%(i+1))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=192.168.144.124,action=output:4'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=192.168.144.124,action=output:4'%(i+1+100))
+            k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=10.0.0.%s,ip_src=192.168.144.124,action=output:4'%(i+1+100))
+            
             for j in range(tmp<<1):
-                if i!=j:
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1+100,i+1))
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1+100,i+1))
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1+100,i+1))
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
+                k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
+                '''
+                 if i!=j:
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1,i+1))
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1+100,i+1))
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:2'%(j+1,i+1))
@@ -134,7 +160,7 @@ def multiControllerNet():
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,udp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=2,tcp,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
                     k.cmdPrint('ovs-ofctl -O OpenFlow13 add-flow '+k.name+' priority=1,eth_type=2048,ip_src=10.0.0.%s,ip_dst=10.0.0.%s,action=output:3'%(j+1,i+1+100))
-
+               '''
     '''
     for i in range(tmp<<1):
         sdn_switch[0].cmdPrint('ovs-ofctl -O OpenFlow13 add-flow S15 priority=2,udp,ip_dst=10.0.0.%s,action=output:2'%(i+1))
@@ -154,11 +180,13 @@ def multiControllerNet():
         print 'activate',i
         #popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
         #popens[hosts2[i]] = hosts2[i].popen('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
-        hosts1[i].cmd('python client.py 1 1 %s user4 > %s &'%(i,'user1'+str(i)+'.txt'))
+        hosts1[i].cmd('nohup python client.py 1 1 %s test1/user1%s > %s &'%(i,str(i+1).zfill(2),'user1'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
-        hosts2[i].cmd('python client.py 1 2 %s user4 > %s &'%(i,'user2'+str(i)+'.txt'))
+        hosts2[i].cmd('nohup python client.py 1 2 %s test1/user2%s > %s &'%(i,str(i+1).zfill(2),'user2'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
     
+        #hosts1[i].cmd('nohup python client.py 1 1 %s test3/user1%s > %s &'%(i,i,'user1'+str(i)+'.txt'))
+        #hosts2[i].cmd('nohup python client.py 1 2 %s test3/user2%s > %s &'%(i,i,'user2'+str(i)+'.txt'))
     '''
     for host,line in pmonitor(popens):
         if host:
@@ -172,7 +200,6 @@ def multiControllerNet():
     print "*** Running CLI"
     '''
     CLI( net )
-
     print "*** Stopping network"
     net.stop()
 

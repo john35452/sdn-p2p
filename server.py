@@ -88,9 +88,9 @@ def client(ip, port, message):
 def writefile(queue):
     standard = ['source','ip','port','timestamp']
     tracker_list1 = ['type','hash','peers']
-    tracker_list2 = ['type','uploaded','compact','numwant','no_peer_id','info_hash','event','downloaded','redundant','key','corrupt','peer_id','port','supportcrypto','left']
+    tracker_list2 = ['type','inter_ip','uploaded','compact','numwant','no_peer_id','info_hash','event','downloaded','redundant','key','corrupt','peer_id','supportcrypto','left']
     switch_list = open('switch_list','r').read().split()
-    client_list = ['hash','content'] 
+    client_list = ['inter_ip','hash','content'] 
     f1 = csv.DictWriter(open('data_client.csv','w'),standard+client_list)
     f2 = csv.DictWriter(open('data_tracker_peer.csv','w'),standard+tracker_list1)
     f3 = csv.DictWriter(open('data_tracker_request.csv','w'),standard+tracker_list2)

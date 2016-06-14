@@ -1,9 +1,9 @@
 2
-3 10MBa.txt.torrent
-ds 10MBa.txt.torrent 200
-us 10MBa.txt.torrent 200
-7 10MBa.txt.torrent
+3 100MBa.txt.torrent
+ds 100MBa.txt.torrent 100
+us 100MBa.txt.torrent 100
+7 100MBa.txt.torrent
 s 10
 sf
-f 10MBa.txt.torrent
+f 100MBa.txt.torrent
 10
