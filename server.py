@@ -8,6 +8,8 @@ import time
 import csv
 import traceback
 from pympler import asizeof
+from sklearn.externals import joblib
+from sklearn.ensemble import RandomForestClassifier
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
@@ -36,13 +38,12 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                         if long_data!='':
                             data[i] = long_data+data[i]
                             long_data = ''
-                        print 'total memory:',asizeof.asizeof(data[i])
-                        print 'total len:',len(data[i])
+                        print 'total memory:',asizeof.asizeof(data[i]),'total len:',len(data[i])
                         datas = json.loads(data[i])
                         datas['ip'] = self.client_address[0]
                         datas['port'] = self.client_address[1]
                         #print sys.getsizeof(datas)
-                        server.queue.put(datas)
+                        write_queue.put(datas)
                         response = "{} ip:{}: {}".format(cur_thread.name,self.client_address,sys.getsizeof(datas))
                         self.request.sendall(response)
                     else:                           
@@ -72,8 +73,110 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
           
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     a = []
-    queue = Queue.Queue()
-    terminate = False
+
+class prediction(threading.Thread):
+    def __init__(self,queue):
+        super(prediction,self).__init__()
+        self.queue = queue
+        self.flow = []
+        self.period = 30
+        self.timer = time.time()
+        self.ip = ('192.168.144.134',50000)
+        self.feature = ['host_name','host_count','all_in_number','connectivity','all_in_bytes','all_in_packets','udp_in_number','udp_in_bytes','udp_in_packets','udp_in_speed','udp_in_packet_size','udp_in_percentage','tcp_in_number','tcp_in_bytes','tcp_in_packets','tcp_in_speed','ip_in_number','ip_in_bytes','ip_in_packets','ip_in_speed','all_out_number','all_out_bytes','all_out_packets','udp_out_number','udp_out_bytes','udp_out_packets','udp_out_speed','udp_out_packet_size','udp_out_percentage','tcp_out_number','tcp_out_bytes','tcp_out_packets','tcp_out_speed','ip_out_number','ip_out_bytes','ip_out_packets','ip_out_speed']
+        
+        try:
+            self.model = joblib.load('./model/RF_c.pkl') 
+            print 'Load model successfully'   
+        except:
+            traceback.print_exc()    
+            print 'Fail to read machine learning model'
+
+    def run(self):
+        while not terminate:
+            while not self.queue.empty():
+                data = self.queue.get()
+                self.flow.append(data)
+            if time.time()-self.timer>self.period:
+                print '***************************************************Prediction*********************************************************'
+                self.timer = time.time()
+                if float(self.flow[-1]['S0'][0]['duration'][:-1])<self.period:
+                    print '**************************too fast*******************************************'
+                    print self.flow[-1]['S0'][0]['duration']
+                    continue
+                output = {}
+                host = {}
+                wait = False
+                tmp = 32
+                source_provider = '192.168.144.149'
+                for i in range(tmp):
+                    host['10.0.0.%s'%(i+1)] = {'peer_ids':[],'hash':[],'port':[],'torrent':{},'in':{'udp':{},'tcp':{},'ip':{},'other':{}},'out':{'udp':{},'tcp':{},'ip':{},'other':{}}}
+                    host['10.0.0.%s'%(i+1+100)] = {'peer_ids':[],'hash':[],'port':[],'torrent':{},'in':{'udp':{},'tcp':{},'ip':{},'other':{}},'out':{'udp':{},'tcp':{},'ip':{},'other':{}}}
+                host[source_provider] = {'peer_ids':[],'hash':[],'port':[],'torrent':{},'in':{'udp':{},'tcp':{},'ip':{},'other':{}},'out':{'udp':{},'tcp':{},'ip':{},'other':{}}}
+                for k in host.keys():
+                    output[k] = {'host_name':k,'host_count':tmp*2}
+                sdn_switch_list = ['S0']
+                for k in self.flow:
+                    for rule in k['S0']:
+                        #print rule['n_bytes'],rule['table']
+                        if rule['n_bytes']=='0' or rule['table']=='0':
+                            continue
+                        if 'nw_dst' in rule and 'nw_src' in rule:
+                            #in
+                            if rule['nw_src'] not in host[rule['nw_dst']]['in'][rule['type']]:
+                                host[rule['nw_dst']]['in'][rule['type']][rule['nw_src']] = [{'n_packets':int(rule['n_packets']),'n_bytes':int(rule['n_bytes']),'duration':float(rule['duration'][:-1])}]
+                            else:
+                                host[rule['nw_dst']]['in'][rule['type']][rule['nw_src']].append({'n_packets':int(rule['n_packets']),'n_bytes':int(rule['n_bytes']),'duration':float(rule['duration'][:-1])})
+                            #out
+                            if rule['nw_dst'] not in host[rule['nw_src']]['out'][rule['type']]:
+                                host[rule['nw_src']]['out'][rule['type']][rule['nw_dst']] = [{'n_packets':int(rule['n_packets']),'n_bytes':int(rule['n_bytes']),'duration':float(rule['duration'][:-1])}]
+                            else:
+                                host[rule['nw_src']]['out'][rule['type']][rule['nw_dst']].append({'n_packets':int(rule['n_packets']),'n_bytes':int(rule['n_bytes']),'duration':float(rule['duration'][:-1])})
+                print '***********************************Read flow***********************************************'
+                direction = ['in','out']
+                flow_type = ['udp','tcp','ip']
+                test_x = []
+                host_list = host.keys()
+                for k in host_list:
+                    all_peer = []
+                    for direct in direction:
+                        #print direct
+                        peer = []
+                        for _type in flow_type:
+                            output[k][_type+'_'+direct+'_number'] = len(host[k][direct][_type])
+                            byte = 0.0
+                            packet = 0.0
+                            speed = 0.0
+                            for a,b in host[k][direct][_type].iteritems():
+                                if a not in peer:
+                                    peer.append(a)
+                                    if a not in all_peer:
+                                        all_peer.append(a)
+                                byte += b[-1]['n_bytes']
+                                packet += b[-1]['n_packets']
+                                if len(b)>1:
+                                    speed += (b[-1]['n_bytes']-b[0]['n_bytes'])/(b[-1]['duration']-b[0]['duration'])
+                            output[k][_type+'_'+direct+'_bytes'] = byte
+                            output[k][_type+'_'+direct+'_packets'] = packet
+                            output[k][_type+'_'+direct+'_speed'] = speed/output[k][_type+'_'+direct+'_number'] if output[k][_type+'_'+direct+'_number']>0 else 0.0
+                            if _type == 'udp':
+                                output[k]['udp_'+direct+'_packet_size'] = byte/packet if packet>0 else 0.0
+                        output[k]['all_'+direct+'_bytes'] = 0
+                        output[k]['all_'+direct+'_packets'] = 0
+                        output[k]['all_'+direct+'_number'] = len(peer)
+                        for _type in flow_type:
+                            output[k]['all_'+direct+'_bytes'] += output[k][_type+'_'+direct+'_bytes']
+                            output[k]['all_'+direct+'_packets'] += output[k][_type+'_'+direct+'_packets']
+                        output[k]['udp_'+direct+'_percentage'] = float(output[k]['udp_'+direct+'_packets'])/output[k]['all_'+direct+'_packets'] if output[k]['all_'+direct+'_packets'] > 0 else 0.0
+                    output[k]['connectivity'] = float(len(all_peer))/output[k]['host_count']
+                    test_x.append([output[k][n] for n in self.feature[1:]])
+                print '***********************************Machine learning result***********************************************'
+                test_y = self.model.predict(test_x)
+                result = {}
+                for k in range(len(host_list)):
+                    result[host_list[k]]=test_y[k] 
+                self.flow = []
+                client(self.ip[0],self.ip[1],json.dumps(result))
+                
 
 def client(ip, port, message):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -82,10 +185,14 @@ def client(ip, port, message):
         sock.sendall(message)
         response = sock.recv(1024)
         print "Received: {}".format(response)
+        print 'Send prediction successfully'
+    except:
+        print 'Error during tranmitting prediction'
     finally:
         sock.close()
+        
 
-def writefile(queue):
+def writefile(queue,flow_queue):
     standard = ['source','ip','port','timestamp']
     tracker_list1 = ['type','hash','peers']
     tracker_list2 = ['type','inter_ip','uploaded','compact','numwant','no_peer_id','info_hash','event','downloaded','redundant','key','corrupt','peer_id','supportcrypto','left']
@@ -111,13 +218,15 @@ def writefile(queue):
                     f3.writerow(data)
             elif data['source']=='switch':
                 f4.writerow(data)
-        elif server.terminate:
+                if punishment:
+                    flow_queue.put(data)
+        elif terminate:
             break
 
 if __name__ == "__main__":
     # Port 0 means to select an arbitrary unused port
     #HOST, PORT = "localhost", 50000
-    HOST, PORT = '192.168.144.124', 50000
+    HOST, PORT = '192.168.144.149', 50000
    
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     ip, port = server.server_address
@@ -125,20 +234,27 @@ if __name__ == "__main__":
     print threading.activeCount()
     # Start a thread with the server -- that thread will then start one
     # more thread for each request
+    terminate = False
+    punishment = True
+    write_queue = Queue.Queue()
+    flow_queue = Queue.Queue()
     server_thread = threading.Thread(target=server.serve_forever)
-    write_thread = threading.Thread(target=writefile,args=(server.queue, ),name='thread-writefile')
-
+    write_thread = threading.Thread(target=writefile,args=(write_queue, flow_queue),name='thread-writefile')
     # Exit the server thread when the main thread terminates
     server_thread.daemon = True
     write_thread.setDaemon(True)
     server_thread.start()
     write_thread.start()
+    if punishment:
+        prediction_thread = prediction(flow_queue)
+        prediction_thread.setDaemon(True)
+        prediction_thread.start()
     print "Server loop running in thread:", server_thread.name
     while True:
         data = raw_input('request\n')
         print threading.activeCount()
         if data=='stop':
-            server.terminate = True
+            terminate = True
             server.shutdown()
             server.server_close()
             write_thread.join()

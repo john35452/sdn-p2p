@@ -5,9 +5,10 @@ if len(sys.argv)<3:
     sys.exit()
 
 speed = [100,500,1000]
+speed = [300]
 file_list = ['1GBa.txt.torrent','1GBb.txt.torrent','1GBc.txt.torrent']
 files = list(file_list)
-time_range = 2000
+time_range = 1000
 time_start = [0]
 cut = (time_range/2)/len(file_list)
 for k in range(len(file_list)-1):
@@ -16,7 +17,9 @@ time_start.append(time_range/2)
 time_start.append(time_range)
 random.shuffle(files)
 download = speed[random.randint(0,len(speed)-1)]
-upload = speed[random.randint(0,len(speed)-1)]
+upload = download + random.randint(0,download/2)-download/4
+download = upload = speed[0]
+upload = 600
 print 'start:',time_start
 print 'files:',files
 print 'download:',download

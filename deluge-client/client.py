@@ -7,7 +7,8 @@ import threading
 import os
 from datetime import datetime
 
-def transmit_data(client,socket):
+def transmit_data(client):
+    global sock,non_limit
     while data_sending:
         threadlock.acquire()
         status = client.get_torrents_status()
@@ -18,14 +19,24 @@ def transmit_data(client,socket):
         for k,v in status.iteritems():
             d_payload += v['total_payload_download']
             u_payload += v['total_payload_upload']
-        if u_payload > d_payload*client_data['rate']:
+        if len(non_limit)>0:
+            tmp = []
+            for k in non_limit:
+                if k in torrent_speed:
+                    client.set_torrent_max_upload_speed(k,torrent_speed[k])
+                else:
+                    tmp.append(k)
+            non_limit = tmp
+                    
+        if u_payload > d_payload/client_data['rate']:
             #print 'Upload too much',u_payload
             if not client_data['stop']:
-                print 'Upload too much',u_payload,d_payload,d_payload*client_data['rate']
+                print 'Upload too much',u_payload,d_payload,d_payload/client_data['rate']
                 threadlock.acquire()
                 for k,v in status.iteritems():
                     client.set_torrent_max_upload_speed(k,2)
                 threadlock.release()
+                non_limit = []
                 print 'Stop uploading'
                 client_data['stop'] = True
         else:
@@ -33,10 +44,16 @@ def transmit_data(client,socket):
                 speed = ((d_payload*client_data['rate'])-u_payload)/3000.0
                 threadlock.acquire()
                 for k,v in status.iteritems():
+                    if k in torrent_speed:
+                        client.set_torrent_max_upload_speed(k,torrent_speed[k])
+                    else:
+                        non_limit.append(k)
+                    '''
                     if torrent_speed[k]<speed:
                         client.set_torrent_max_upload_speed(k,torrent_speed[k])
                     else:
                         client.set_torrent_max_upload_speed(k,speed)
+                    '''
                 threadlock.release()
                 print 'Keep uploading'
                 client_data['stop'] = False
@@ -55,9 +72,20 @@ def transmit_data(client,socket):
         try:
             data = json.dumps(status)
             #socket.sendall(str(len(data))+'\n'+data+'\n')
-            socket.sendall(data+'\n')
+            sock.sendall(data+'\n')
+
         except:
             print 'Error: error during transmitting data or dumping data'
+            print 'Re-establish connection'
+            while True:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.connect((ip, port))
+                    print 'Connection establish'
+                    break
+                except:
+                    print 'Connection fail'
+                    
         time.sleep(3)
 
 print sys.argv     
@@ -86,10 +114,11 @@ print state
 torrent_file = {}
 client_data = {'limit':False,'rate':1.0,'stop':False}
 torrent_speed = {}
+non_limit = []
 #Transmit to server
 data_sending = True
 if data_sending:
-    ip = '192.168.144.124'
+    ip = '192.168.144.149'
     port = 50000
     while True:
         try:
@@ -103,7 +132,7 @@ if data_sending:
     sock_name = sock.getsockname()
     print sock_name
     threadlock = threading.Lock()
-    trans = threading.Thread(target=transmit_data,args=(a,sock),name='thread-transdata')
+    trans = threading.Thread(target=transmit_data,args=(a,),name='thread-transdata')
     trans.setDaemon(True)
     trans.start()
 
@@ -221,8 +250,8 @@ else:
                 threadlock.acquire()
                 a.set_torrent_max_upload_speed(torrent_file[line[1]],speed)
                 #To avoid the situation that transmit thread use this immediately
-                torrent_speed[torrent_file[line[1]]]=float(line[2]) 
                 threadlock.release()
+                torrent_speed[torrent_file[line[1]]]=float(line[2]) 
             elif line[0] == '10':
                 threadlock.acquire()
                 data = a.get_torrents_status()
@@ -237,7 +266,8 @@ else:
                 for k,v in data.iteritems():
                     upload += v['total_payload_upload']
                     download += v['total_payload_download']
-                print 'Wish rate:',client_data['rate'],'Real rate:',upload/download  
+                real_rate = download/upload if upload>0 else float('Intf')
+                print 'Wish rate:',client_data['rate'],'Real rate:',real_rate
                 print 'Task finishes'
                 category = [0.5,1,2,1000]
                 rank1,rank2 = 0,0
@@ -246,12 +276,12 @@ else:
                         rank1 = i
                         break
                 for i in range(len(category)):
-                    if category[i]>upload/download:
+                    if category[i]>real_rate:
                         rank2 = i
                         break
                 
                 with open(sock_name[0]+'_answer.txt','w') as f:
-                    f.write(str(client_data['rate'])+' '+str(upload/download)+' '+str(rank1)+' '+str(rank2))
+                    f.write(str(client_data['rate'])+','+str(real_rate)+','+str(rank1)+','+str(rank2))
                 print 'Finish writing answer'
                 break
             elif line[0] == 'sf':

@@ -1,0 +1,26 @@
+2
+rate 0.684724984419
+3 1GBc.txt.torrent
+ds 1GBc.txt.torrent 100
+us 1GBc.txt.torrent 93
+1
+7 1GBc.txt.torrent
+s 277
+3 1GBa.txt.torrent
+ds 1GBa.txt.torrent 100
+us 1GBa.txt.torrent 93
+1
+7 1GBa.txt.torrent
+s 181
+3 1GBb.txt.torrent
+ds 1GBb.txt.torrent 100
+us 1GBb.txt.torrent 93
+1
+7 1GBb.txt.torrent
+s 542
+s 1000
+f 1GBa.txt.torrent
+f 1GBb.txt.torrent
+f 1GBc.txt.torrent
+sf
+10
