@@ -3,7 +3,7 @@ import os
 import random
 left = 32
 right = 32
-rate = [0,0.5,1,2,1000]
+rate = [0,1,2,5,1000]
 for i in range(4):
     print 'group:',(i+1)
     for j in range(left/4):

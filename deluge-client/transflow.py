@@ -66,4 +66,8 @@ while True:
     except Exception:
         traceback.print_exc()
         print 'Error: error during transmitting flow'
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((ip, port))
+        print 'Re-establish connection and send data'
+        sock.sendall(datas+'\n') 
     time.sleep(3)

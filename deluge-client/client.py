@@ -82,6 +82,7 @@ def transmit_data(client):
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.connect((ip, port))
                     print 'Connection establish'
+                    sock.sendall(data+'\n')
                     break
                 except:
                     print 'Connection fail'
@@ -266,10 +267,10 @@ else:
                 for k,v in data.iteritems():
                     upload += v['total_payload_upload']
                     download += v['total_payload_download']
-                real_rate = download/upload if upload>0 else float('Intf')
+                real_rate = download/upload if upload>0 else 999
                 print 'Wish rate:',client_data['rate'],'Real rate:',real_rate
                 print 'Task finishes'
-                category = [0.5,1,2,1000]
+                category = [1,2,5,1000]
                 rank1,rank2 = 0,0
                 for i in range(len(category)):
                     if category[i]>client_data['rate']:

@@ -79,7 +79,7 @@ class prediction(threading.Thread):
         super(prediction,self).__init__()
         self.queue = queue
         self.flow = []
-        self.period = 30
+        self.period = 60
         self.timer = time.time()
         self.ip = ('192.168.144.134',50000)
         self.feature = ['host_name','host_count','all_in_number','connectivity','all_in_bytes','all_in_packets','udp_in_number','udp_in_bytes','udp_in_packets','udp_in_speed','udp_in_packet_size','udp_in_percentage','tcp_in_number','tcp_in_bytes','tcp_in_packets','tcp_in_speed','ip_in_number','ip_in_bytes','ip_in_packets','ip_in_speed','all_out_number','all_out_bytes','all_out_packets','udp_out_number','udp_out_bytes','udp_out_packets','udp_out_speed','udp_out_packet_size','udp_out_percentage','tcp_out_number','tcp_out_bytes','tcp_out_packets','tcp_out_speed','ip_out_number','ip_out_bytes','ip_out_packets','ip_out_speed']
@@ -92,20 +92,27 @@ class prediction(threading.Thread):
             print 'Fail to read machine learning model'
 
     def run(self):
-        while not terminate:
+        while not start:
+            pass
+        self.timer = time.time()
+        print '**************************start downloading*******************************************'
+        while not terminate:            
             while not self.queue.empty():
                 data = self.queue.get()
                 self.flow.append(data)
             if time.time()-self.timer>self.period:
                 print '***************************************************Prediction*********************************************************'
                 self.timer = time.time()
+                '''
+                if len(self.flow)<20:
+                    continue
                 if float(self.flow[-1]['S0'][0]['duration'][:-1])<self.period:
                     print '**************************too fast*******************************************'
                     print self.flow[-1]['S0'][0]['duration']
                     continue
+                '''
                 output = {}
                 host = {}
-                wait = False
                 tmp = 32
                 source_provider = '192.168.144.149'
                 for i in range(tmp):
@@ -146,15 +153,21 @@ class prediction(threading.Thread):
                             byte = 0.0
                             packet = 0.0
                             speed = 0.0
+                            ignore_speed = 0
                             for a,b in host[k][direct][_type].iteritems():
                                 if a not in peer:
                                     peer.append(a)
-                                    if a not in all_peer:
-                                        all_peer.append(a)
-                                byte += b[-1]['n_bytes']
-                                packet += b[-1]['n_packets']
-                                if len(b)>1:
-                                    speed += (b[-1]['n_bytes']-b[0]['n_bytes'])/(b[-1]['duration']-b[0]['duration'])
+                                byte += b[-1]['n_bytes'] - b[0]['n_bytes']
+                                packet += b[-1]['n_packets'] - b[0]['n_packets']
+                                if len(b)==1:
+                                    ignore_speed += 1
+                                    continue
+                                times = 0.0
+                                for j in range(len(b)-1):
+                                    if b[j+1]['n_bytes']>b[j]['n_bytes']:
+                                        times += b[j+1]['duration'] - b[j]['duration']
+                                if times>0: 
+                                    speed += (b[-1]['n_bytes']-b[0]['n_bytes'])/times
                             output[k][_type+'_'+direct+'_bytes'] = byte
                             output[k][_type+'_'+direct+'_packets'] = packet
                             output[k][_type+'_'+direct+'_speed'] = speed/output[k][_type+'_'+direct+'_number'] if output[k][_type+'_'+direct+'_number']>0 else 0.0
@@ -163,6 +176,7 @@ class prediction(threading.Thread):
                         output[k]['all_'+direct+'_bytes'] = 0
                         output[k]['all_'+direct+'_packets'] = 0
                         output[k]['all_'+direct+'_number'] = len(peer)
+                        all_peer = all_peer + [n for n in peer if n not in all_peer]
                         for _type in flow_type:
                             output[k]['all_'+direct+'_bytes'] += output[k][_type+'_'+direct+'_bytes']
                             output[k]['all_'+direct+'_packets'] += output[k][_type+'_'+direct+'_packets']
@@ -193,6 +207,7 @@ def client(ip, port, message):
         
 
 def writefile(queue,flow_queue):
+    global start
     standard = ['source','ip','port','timestamp']
     tracker_list1 = ['type','hash','peers']
     tracker_list2 = ['type','inter_ip','uploaded','compact','numwant','no_peer_id','info_hash','event','downloaded','redundant','key','corrupt','peer_id','supportcrypto','left']
@@ -206,6 +221,7 @@ def writefile(queue,flow_queue):
     f2.writeheader()
     f3.writeheader()
     f4.writeheader()
+    start_list = []
     while True:
         if not queue.empty():
             data = queue.get()
@@ -216,9 +232,14 @@ def writefile(queue,flow_queue):
                     f2.writerow(data)    
                 else:
                     f3.writerow(data)
+                    if not start:
+                        if data['inter_ip'][0] not in start_list:
+                            start_list.append(data['inter_ip'][0])
+                            if len(start_list)==64:
+                                start = True
             elif data['source']=='switch':
                 f4.writerow(data)
-                if punishment:
+                if start and punishment:
                     flow_queue.put(data)
         elif terminate:
             break
@@ -235,7 +256,8 @@ if __name__ == "__main__":
     # Start a thread with the server -- that thread will then start one
     # more thread for each request
     terminate = False
-    punishment = True
+    punishment = False
+    start = False
     write_queue = Queue.Queue()
     flow_queue = Queue.Queue()
     server_thread = threading.Thread(target=server.serve_forever)

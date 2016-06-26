@@ -103,14 +103,14 @@ def multiControllerNet():
     
     for k in left_switch:
         k.start([c3])
-        k.cmdPrint('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
+        k.cmd('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
     for k in right_switch:
         k.start([c2])
-        k.cmdPrint('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
+        k.cmd('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
     for k in sdn_switch:
         k.start([c1])
-        k.cmdPrint('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
-   
+        k.cmd('ovs-vsctl set bridge '+k.name+' protocols=OpenFlow13')
+    print 'Finish bridges setting'
     
     ovs_url = 'http://'+CONTROLLER_IP+':8080/v1.0/conf/switches/'+str(1).zfill(16)+'/ovsdb_addr'
     queue_url = 'http://'+CONTROLLER_IP+':8080/qos/queue/status/'+str(1).zfill(16)
@@ -131,7 +131,7 @@ def multiControllerNet():
     q2 = []
     for i in range(times):
         q1.append(str(i)+'=@q'+str(i))
-        q2.append('-- --id=@q'+str(i)+' create Queue other-config:max-rate=1000000000')
+        q2.append('-- --id=@q'+str(i)+' create Queue other-config:max-rate='+str(1000*1000*8))
     q1 = ','.join(q1)
     q2 = ' '.join(q2)
     CMD = 'ovs-vsctl'
@@ -178,19 +178,23 @@ def multiControllerNet():
         for j in range(tmp):
             payload = {'match':{'nw_src':'10.0.0.%s'%(i+1),'nw_dst':'10.0.0.%s'%(100+j+1),'nw_proto':'UDP'},'actions':{'queue':str(i*tmp+j+1)}}
             response = requests.post(rule_url,data=json.dumps(payload))
-            print response,response.text
+            if response.status_code!=200:
+                print response,response.text
             payload = {'match':{'nw_src':'10.0.0.%s'%(i+1+100),'nw_dst':'10.0.0.%s'%(j+1),'nw_proto':'UDP'},'actions':{'queue':str(i*tmp+j+1)}}
             response = requests.post(rule_url,data=json.dumps(payload))
-            print response,response.text
+            if response.status_code!=200:
+                print response,response.text
             
     for i in range(tmp):
         payload = {'match':{'nw_src':source_provider,'nw_dst':'10.0.0.%s'%(i+1),'nw_proto':'UDP'},'actions':{'queue':str(tmp*tmp+i+1)}}
         response = requests.post(rule_url,data=json.dumps(payload))
-        print response,response.text 
+        if response.status_code!=200:
+            print response,response.text
         payload = {'match':{'nw_src':source_provider,'nw_dst':'10.0.0.%s'%(i+1+100),'nw_proto':'UDP'},'actions':{'queue':str(tmp*tmp+i+1)}}
         response = requests.post(rule_url,data=json.dumps(payload))
-        print response,response.text
-        
+        if response.status_code!=200:
+            print response,response.text
+    print 'Finish adding flow'    
     
     for k in sdn_switch: 
         for i in range(tmp):
@@ -235,9 +239,9 @@ def multiControllerNet():
         print 'activate',i
         #popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
         #popens[hosts2[i]] = hosts2[i].popen('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
-        hosts1[i].cmd('nohup python client.py 1 1 %s fix_s300_t1000/user1%s > %s &'%(i,str(i+1).zfill(2),'user1'+str(i+1).zfill(2)+'.txt'))
+        hosts1[i].cmd('nohup python client.py 1 1 %s 200s/4/user1%s > %s &'%(i,str(i+1).zfill(2),'user1'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
-        hosts2[i].cmd('nohup python client.py 1 2 %s fix_s300_t1000/user2%s > %s &'%(i,str(i+1).zfill(2),'user2'+str(i+1).zfill(2)+'.txt'))
+        hosts2[i].cmd('nohup python client.py 1 2 %s 200s/4/user2%s > %s &'%(i,str(i+1).zfill(2),'user2'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
     
         #hosts1[i].cmd('nohup python client.py 1 1 %s test3/user1%s > %s &'%(i,i,'user1'+str(i)+'.txt'))
