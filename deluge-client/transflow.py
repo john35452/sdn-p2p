@@ -50,8 +50,9 @@ while True:
                         try:
                             tmp[j[0]] = j[1]
                         except:
-                            print j
-                            sys.exit()
+                            print 'Undefined flow'
+                            print 'i:',i
+                            print 'j:',j
                 else:
                     tmp[j[0]] = j[1]
             data[k].append(tmp)

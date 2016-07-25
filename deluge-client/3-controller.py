@@ -127,11 +127,11 @@ def multiControllerNet():
     #local queue setting
     times = tmp**2+tmp+1
     print 'Add ',times,'queues to S0-eth2 and S0-eth3'
-    q1 = []
-    q2 = []
-    for i in range(times):
+    q1 = ['0=@q0']
+    q2 = ['-- --id=@q0 create Queue other-config:max-rate='+str(1000**3)]
+    for i in range(1,times):
         q1.append(str(i)+'=@q'+str(i))
-        q2.append('-- --id=@q'+str(i)+' create Queue other-config:max-rate='+str(1000*1000*8))
+        q2.append('-- --id=@q'+str(i)+' create Queue other-config:max-rate='+str(500*1000*8))
     q1 = ','.join(q1)
     q2 = ' '.join(q2)
     CMD = 'ovs-vsctl'
@@ -233,15 +233,15 @@ def multiControllerNet():
     '''
     print "*** Testing network"
     #net.pingAll()
-     
+    directory = '1400s/10/'
     popens = {}
     for i in range(tmp):
         print 'activate',i
         #popens[hosts1[i]] = hosts1[i].popen('python client.py 1 1 %s user1 > %s &'%(i,'user1'+str(i)))
         #popens[hosts2[i]] = hosts2[i].popen('python client.py 1 2 %s user1 > %s &'%(i,'user2'+str(i)))
-        hosts1[i].cmd('nohup python client.py 1 1 %s 200s/4/user1%s > %s &'%(i,str(i+1).zfill(2),'user1'+str(i+1).zfill(2)+'.txt'))
+        hosts1[i].cmd('nohup python client.py 1 1 %s '%(i)+directory+'user1%s > %s &'%(str(i+1).zfill(2),'user1'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
-        hosts2[i].cmd('nohup python client.py 1 2 %s 200s/4/user2%s > %s &'%(i,str(i+1).zfill(2),'user2'+str(i+1).zfill(2)+'.txt'))
+        hosts2[i].cmd('nohup python client.py 1 2 %s '%(i)+directory+'user2%s > %s &'%(str(i+1).zfill(2),'user2'+str(i+1).zfill(2)+'.txt'))
         #time.sleep(1)
     
         #hosts1[i].cmd('nohup python client.py 1 1 %s test3/user1%s > %s &'%(i,i,'user1'+str(i)+'.txt'))
